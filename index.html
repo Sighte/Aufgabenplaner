@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aufgabenplaner</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1><i class="fas fa-tasks"></i> Aufgabenplaner</h1>
+        </div>
+
+        <!-- Pomodoro Timer Display -->
+        <div class="header-timer hidden" id="headerTimer">
+            <div class="timer-task-name" id="timerTaskName">Keine Aufgabe</div>
+            <div class="timer-display">
+                <span class="timer-time" id="timerDisplay">25:00</span>
+                <span class="timer-mode" id="timerMode">Arbeit</span>
+            </div>
+            <div class="timer-controls">
+                <button class="btn btn-icon btn-timer" id="timerPlayPause" title="Start/Pause">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="btn btn-icon btn-timer" id="timerStop" title="Stopp">
+                    <i class="fas fa-stop"></i>
+                </button>
+                <button class="btn btn-icon btn-timer" id="timerSettings" title="Timer-Einstellungen">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Suchen... (/)">
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-icon" id="pomodoroBtn" title="Pomodoro Timer">
+                <i class="fas fa-clock"></i>
+            </button>
+            <button class="btn btn-icon" id="statsBtn" title="Statistiken (S)">
+                <i class="fas fa-chart-bar"></i>
+            </button>
+            <button class="btn btn-icon" id="viewToggle" title="Ansicht wechseln (V)">
+                <i class="fas fa-columns"></i>
+            </button>
+            <button class="btn btn-icon" id="themeToggle" title="Theme wechseln (T)">
+                <i class="fas fa-moon"></i>
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-icon" id="menuBtn" title="Menü">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <button id="notificationBtn"><i class="fas fa-bell"></i> Benachrichtigungen</button>
+                    <button id="exportBtn"><i class="fas fa-download"></i> Export JSON</button>
+                    <button id="importBtn"><i class="fas fa-upload"></i> Import JSON</button>
+                    <input type="file" id="importFile" accept=".json" hidden>
+                    <button id="backupBtn"><i class="fas fa-database"></i> Backup anzeigen</button>
+                    <hr>
+                    <button id="clearDataBtn" class="danger"><i class="fas fa-trash"></i> Alle Daten löschen</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <h3>Projekte</h3>
+            <button class="btn btn-small btn-add-project" id="addProjectBtn">
+                <i class="fas fa-plus"></i> Neues Projekt
+            </button>
+            <ul class="project-list" id="projectList">
+                <!-- Projects will be rendered here -->
+            </ul>
+        </div>
+        <div class="sidebar-section">
+            <h3>Filter</h3>
+            <div class="filter-group">
+                <label>Priorität:</label>
+                <select id="filterPriority">
+                    <option value="all">Alle</option>
+                    <option value="high">Hoch</option>
+                    <option value="medium">Mittel</option>
+                    <option value="low">Niedrig</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Sortierung:</label>
+                <select id="sortBy">
+                    <option value="created">Erstelldatum</option>
+                    <option value="deadline">Deadline</option>
+                    <option value="priority">Priorität</option>
+                </select>
+            </div>
+        </div>
+        <div class="sidebar-section keyboard-hints">
+            <h3>Tastaturkürzel</h3>
+            <div class="hint"><kbd>N</kbd> Neue Aufgabe</div>
+            <div class="hint"><kbd>P</kbd> Neues Projekt</div>
+            <div class="hint"><kbd>/</kbd> Suche</div>
+            <div class="hint"><kbd>V</kbd> Ansicht wechseln</div>
+            <div class="hint"><kbd>T</kbd> Theme wechseln</div>
+            <div class="hint"><kbd>S</kbd> Statistiken</div>
+            <div class="hint"><kbd>C</kbd> Kalender</div>
+            <div class="hint"><kbd>Esc</kbd> Dialog schließen</div>
+        </div>
+        <div class="sidebar-section quick-add-help">
+            <h3>Quick-Add Syntax</h3>
+            <div class="hint"><code>!h</code> Hohe Priorität</div>
+            <div class="hint"><code>!m</code> Mittlere Priorität</div>
+            <div class="hint"><code>!l</code> Niedrige Priorität</div>
+            <div class="hint"><code>@projekt</code> Projekt zuweisen</div>
+            <div class="hint"><code>#tag</code> Tag hinzufügen</div>
+            <div class="hint"><code>>2024-01-20</code> Deadline</div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Kanban Board View -->
+        <div class="kanban-board" id="kanbanBoard">
+            <div class="kanban-column" data-status="todo">
+                <div class="column-header">
+                    <h2><i class="fas fa-clipboard-list"></i> To-Do</h2>
+                    <span class="task-count" id="todoCount">0</span>
+                </div>
+                <div class="task-list" id="todoList" data-status="todo">
+                    <!-- Tasks will be rendered here -->
+                </div>
+                <div class="quick-add-container">
+                    <input type="text" class="quick-add-input" data-status="todo"
+                           placeholder="+ Aufgabe hinzufügen... (Enter)">
+                </div>
+            </div>
+            <div class="kanban-column" data-status="inprogress">
+                <div class="column-header">
+                    <h2><i class="fas fa-spinner"></i> In Progress</h2>
+                    <span class="task-count" id="inprogressCount">0</span>
+                </div>
+                <div class="task-list" id="inprogressList" data-status="inprogress">
+                    <!-- Tasks will be rendered here -->
+                </div>
+                <div class="quick-add-container">
+                    <input type="text" class="quick-add-input" data-status="inprogress"
+                           placeholder="+ Aufgabe hinzufügen... (Enter)">
+                </div>
+            </div>
+            <div class="kanban-column" data-status="done">
+                <div class="column-header">
+                    <h2><i class="fas fa-check-circle"></i> Done</h2>
+                    <span class="task-count" id="doneCount">0</span>
+                </div>
+                <div class="task-list" id="doneList" data-status="done">
+                    <!-- Tasks will be rendered here -->
+                </div>
+                <div class="quick-add-container">
+                    <input type="text" class="quick-add-input" data-status="done"
+                           placeholder="+ Aufgabe hinzufügen... (Enter)">
+                </div>
+            </div>
+        </div>
+
+        <!-- List View -->
+        <div class="list-view hidden" id="listView">
+            <table class="task-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Titel</th>
+                        <th>Fortschritt</th>
+                        <th>Projekt</th>
+                        <th>Priorität</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="taskTableBody">
+                    <!-- Tasks will be rendered here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Calendar View -->
+        <div class="calendar-view hidden" id="calendarView">
+            <div class="calendar-header">
+                <button class="btn btn-icon" id="prevMonth">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h2 id="calendarTitle">Januar 2024</h2>
+                <button class="btn btn-icon" id="nextMonth">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button class="btn btn-secondary" id="todayBtn">Heute</button>
+            </div>
+            <div class="calendar-weekdays">
+                <div>Mo</div>
+                <div>Di</div>
+                <div>Mi</div>
+                <div>Do</div>
+                <div>Fr</div>
+                <div>Sa</div>
+                <div>So</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Calendar days will be rendered here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- New Task Button (FAB) -->
+    <button class="fab" id="newTaskFab" title="Neue Aufgabe (N)">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="modalTitle">Neue Aufgabe</h2>
+                <button class="btn btn-icon modal-close" id="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="taskForm">
+                <input type="hidden" id="taskId">
+                <div class="form-group">
+                    <label for="taskTitle">Titel *</label>
+                    <input type="text" id="taskTitle" required placeholder="Aufgabentitel eingeben...">
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Beschreibung</label>
+                    <textarea id="taskDescription" rows="3" placeholder="Beschreibung (optional)..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskProject">Projekt</label>
+                        <select id="taskProject">
+                            <option value="">Kein Projekt</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskPriority">Priorität</label>
+                        <select id="taskPriority">
+                            <option value="low">Niedrig</option>
+                            <option value="medium" selected>Mittel</option>
+                            <option value="high">Hoch</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskDeadline">Deadline</label>
+                        <input type="date" id="taskDeadline">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskReminder">Erinnerung</label>
+                        <select id="taskReminder">
+                            <option value="">Keine</option>
+                            <option value="0">Bei Fälligkeit</option>
+                            <option value="15">15 Min. vorher</option>
+                            <option value="30">30 Min. vorher</option>
+                            <option value="60">1 Stunde vorher</option>
+                            <option value="1440">1 Tag vorher</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskStatus">Status</label>
+                        <select id="taskStatus">
+                            <option value="todo">To-Do</option>
+                            <option value="inprogress">In Progress</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskTags">Tags (kommagetrennt)</label>
+                        <input type="text" id="taskTags" placeholder="z.B. wichtig, dringend">
+                    </div>
+                </div>
+
+                <!-- Subtasks Section -->
+                <div class="form-group subtasks-section">
+                    <label>Subtasks / Checkliste</label>
+                    <div class="subtasks-list" id="subtasksList">
+                        <!-- Subtasks will be rendered here -->
+                    </div>
+                    <div class="subtask-add">
+                        <input type="text" id="newSubtaskInput" placeholder="Neuen Subtask hinzufügen...">
+                        <button type="button" class="btn btn-small btn-primary" id="addSubtaskBtn">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelTask">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="projectModalTitle">Neues Projekt</h2>
+                <button class="btn btn-icon modal-close" id="closeProjectModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="projectForm">
+                <input type="hidden" id="projectId">
+                <div class="form-group">
+                    <label for="projectName">Name *</label>
+                    <input type="text" id="projectName" required placeholder="Projektname eingeben...">
+                </div>
+                <div class="form-group">
+                    <label for="projectColor">Farbe</label>
+                    <div class="color-picker">
+                        <input type="color" id="projectColor" value="#6366f1">
+                        <span class="color-preview" id="colorPreview"></span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelProject">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal" id="statsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Statistiken</h2>
+                <button class="btn btn-icon modal-close" id="closeStatsModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Gesamt</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="stat-value" id="statTodo">0</div>
+                    <div class="stat-label">To-Do</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+                    <div class="stat-value" id="statInProgress">0</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-value" id="statDone">0</div>
+                    <div class="stat-label">Erledigt</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+                    <div class="stat-value" id="statToday">0</div>
+                    <div class="stat-label">Heute erledigt</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value" id="statPomodoros">0</div>
+                    <div class="stat-label">Pomodoros</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pomodoro Settings Modal -->
+    <div class="modal" id="pomodoroModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Pomodoro Einstellungen</h2>
+                <button class="btn btn-icon modal-close" id="closePomodoroModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="pomodoroForm">
+                <div class="form-group">
+                    <label for="workDuration">Arbeitszeit (Minuten)</label>
+                    <input type="number" id="workDuration" value="25" min="1" max="120">
+                </div>
+                <div class="form-group">
+                    <label for="breakDuration">Pause (Minuten)</label>
+                    <input type="number" id="breakDuration" value="5" min="1" max="30">
+                </div>
+                <div class="form-group">
+                    <label for="longBreakDuration">Lange Pause (Minuten)</label>
+                    <input type="number" id="longBreakDuration" value="15" min="1" max="60">
+                </div>
+                <div class="form-group">
+                    <label for="pomodorosUntilLongBreak">Pomodoros bis lange Pause</label>
+                    <input type="number" id="pomodorosUntilLongBreak" value="4" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="pomodoroSound" checked>
+                        Sound bei Timer-Ende
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelPomodoro">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Backup Modal -->
+    <div class="modal" id="backupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>LocalStorage Backup</h2>
+                <button class="btn btn-icon modal-close" id="closeBackupModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="backup-content">
+                <pre id="backupData"></pre>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="copyBackup">
+                    <i class="fas fa-copy"></i> Kopieren
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Day Modal -->
+    <div class="modal" id="calendarDayModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="calendarDayTitle">Aufgaben am Tag</h2>
+                <button class="btn btn-icon modal-close" id="closeCalendarDayModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="calendar-day-tasks" id="calendarDayTasks">
+                <!-- Tasks for selected day -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="addTaskForDay">
+                    <i class="fas fa-plus"></i> Aufgabe hinzufügen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2 id="confirmTitle">Bestätigung</h2>
+                <button class="btn btn-icon modal-close" id="closeConfirmModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p id="confirmMessage">Bist du sicher?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="confirmCancel">Abbrechen</button>
+                <button class="btn btn-danger" id="confirmOk">Bestätigen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
